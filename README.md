@@ -62,6 +62,41 @@ python -m SimpleHTTPServer 3000
 
 Depois acesse: `http://localhost:3000`
 
+## Instalação e Setup
+
+### Instalar dependências
+
+```bash
+npm install
+```
+
+## Desenvolvimento
+
+### Linting e Formatação
+
+O projeto usa [Biome](https://biomejs.dev/) para linting e formatação de código.
+
+**Verificar código:**
+```bash
+npm run check
+```
+
+**Corrigir problemas automaticamente:**
+```bash
+npm run check:fix
+```
+
+**Apenas lint:**
+```bash
+npm run lint
+npm run lint:fix
+```
+
+**Apenas formatação:**
+```bash
+npm run format
+```
+
 ## Deploy na Vercel
 
 ### Pré-requisitos
@@ -154,7 +189,10 @@ dollar-now/
 ├── favicon.svg         # Favicon do aplicativo
 ├── server.js           # Servidor HTTP Node.js (apenas para desenvolvimento local)
 ├── package.json        # Configuração Node.js
+├── biome.json          # Configuração do Biome (linting e formatação)
 ├── vercel.json         # Configuração para deploy na Vercel
 ├── .vercelignore       # Arquivos ignorados no deploy
+├── .biomeignore        # Arquivos ignorados pelo Biome
+├── .gitignore         # Arquivos ignorados pelo Git
 └── README.md           # Documentação
 ```

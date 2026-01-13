@@ -4,7 +4,12 @@
   "description": "Aplicativo web para acompanhar a cotação do dólar em tempo real",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
   },
   "keywords": [
     "dollar",
@@ -13,5 +18,8 @@
     "notifications"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4"
+  }
 }

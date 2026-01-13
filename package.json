@@ -1,0 +1,17 @@
+{
+  "name": "dollar-now",
+  "version": "1.0.0",
+  "description": "Aplicativo web para acompanhar a cotação do dólar em tempo real",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "dollar",
+    "cotação",
+    "exchange-rate",
+    "notifications"
+  ],
+  "author": "",
+  "license": "MIT"
+}

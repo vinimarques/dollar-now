@@ -81,7 +81,7 @@ async function saveConversionToDB(value) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_CONVERSION], 'readwrite');
         const store = transaction.objectStore(STORE_CONVERSION);
-        store.put({ value, timestamp: Date.now() });
+        store.put({ value, timestamp: Date.now() }, 1);
         
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);

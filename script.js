@@ -91,7 +91,7 @@ async function registerServiceWorker() {
             // Escutar mensagens do service worker
             navigator.serviceWorker.addEventListener('message', (event) => {
                 const { type, data } = event.data;
-                
+
                 if (type === 'quote-updated') {
                     // Atualizar UI se a página estiver visível
                     if (!document.hidden && data) {
@@ -170,11 +170,11 @@ async function testNotification() {
         : 'R$ 5,000';
 
     let testMessage = `Esta é uma notificação de teste! A cotação atual é ${testValue}.`;
-    
+
     // Adicionar valor convertido se existir
     if (conversionValue && currentQuote) {
         // Calcular valor em reais (valor em dólares * cotação)
-        const realAmount = conversionValue * currentQuote.value;
+        const realAmount = conversionValue * (currentQuote.value - 0.02);
         const formattedReal = realAmount.toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'BRL',
@@ -451,7 +451,7 @@ function loadAlerts() {
 // Salvar valor de conversão no localStorage
 function saveConversionValue() {
     const value = parseFloat(document.getElementById('conversionValue').value);
-    
+
     if (!value || value <= 0) {
         alert('Por favor, insira um valor válido maior que zero');
         return;
@@ -460,10 +460,10 @@ function saveConversionValue() {
     conversionValue = value;
     localStorage.setItem('dollarConversionValue', JSON.stringify(conversionValue));
     syncDataWithServiceWorker(); // Sincronizar com service worker
-    
+
     // Atualizar exibição do valor convertido
     updateConvertedValue();
-    
+
     // Limpar campo
     document.getElementById('conversionValue').value = '';
 }
@@ -484,15 +484,15 @@ function loadConversionValue() {
 function updateConvertedValue() {
     const container = document.getElementById('convertedValueContainer');
     const amountElement = document.getElementById('convertedAmount');
-    
+
     if (!conversionValue || !currentQuote) {
         container.style.display = 'none';
         return;
     }
 
     // Calcular valor em reais (valor em dólares * cotação)
-    const realAmount = conversionValue * currentQuote.value;
-    
+    const realAmount = conversionValue * (currentQuote.value - 0.02);
+
     // Formatar valor em reais
     const formattedReal = realAmount.toLocaleString('pt-BR', {
         style: 'currency',
@@ -579,7 +579,7 @@ function triggerAlert(alert, currentValue) {
         let message = alert.type === 'above'
             ? `Dólar atingiu ${formattedValue}! (acima de ${alertValueFormatted})`
             : `Dólar atingiu ${formattedValue}! (abaixo de ${alertValueFormatted})`;
-        
+
         // Adicionar valor convertido se existir
         if (conversionValue) {
             // Calcular valor em reais (valor em dólares * cotação)

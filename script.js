@@ -20,6 +20,8 @@ let isFetching = false; // Previne requisições sobrepostas
 let activeNotifications = new Set(); // Rastreia notificações ativas
 let conversionValue = null; // Valor em dólares para conversão
 let serviceWorkerRegistration = null;
+let quoteHistory = []; // Histórico de cotações para o gráfico
+const MAX_HISTORY_LENGTH = 50; // Máximo de pontos no gráfico
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,6 +36,30 @@ document.addEventListener('DOMContentLoaded', () => {
     loadConversionValue();
     requestNotificationPermission();
     registerServiceWorker();
+
+    // Inicializar gráfico
+    function resizeCanvas() {
+        const canvas = document.getElementById('quoteChart');
+        if (canvas) {
+            // Ajustar tamanho do canvas para alta resolução
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+
+            // Redesenhar gráfico se houver dados
+            if (quoteHistory.length > 0) {
+                updateChart();
+            }
+        }
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     // Aguardar um pouco antes da primeira requisição para garantir que tudo está pronto
     setTimeout(() => {
@@ -278,7 +304,19 @@ async function fetchQuote() {
             change: changeValue
         };
 
+        // Adicionar à lista de histórico
+        quoteHistory.push({
+            value: quoteValue,
+            timestamp: currentQuote.timestamp
+        });
+
+        // Limitar o tamanho do histórico
+        if (quoteHistory.length > MAX_HISTORY_LENGTH) {
+            quoteHistory.shift(); // Remove o mais antigo
+        }
+
         updateUI();
+        updateChart();
         checkAlerts();
 
         // Resetar índice da API em caso de sucesso
@@ -299,7 +337,7 @@ async function fetchQuote() {
         const quoteElement = document.getElementById('quoteValue');
         if (quoteElement) {
             quoteElement.textContent = 'Erro ao carregar';
-            quoteElement.style.color = '#ef4444';
+            quoteElement.style.color = 'var(--error, #ef4444)';
         }
 
         // Resetar índice e tentar novamente após 5 segundos
@@ -329,7 +367,7 @@ function updateUI() {
         maximumFractionDigits: 3
     });
     quoteElement.textContent = formattedValue;
-    quoteElement.style.color = '#2d3748'; // Resetar cor em caso de erro anterior
+    quoteElement.style.color = ''; // Resetar cor em caso de erro anterior
 
     // Atualizar variação
     const changeElement = document.getElementById('changeValue');
@@ -343,6 +381,132 @@ function updateUI() {
 
     // Atualizar valor convertido
     updateConvertedValue();
+}
+
+// Atualizar gráfico de cotações
+function updateChart() {
+    const canvas = document.getElementById('quoteChart');
+    if (!canvas || quoteHistory.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Limpar canvas
+    ctx.clearRect(0, 0, width, height);
+
+    if (quoteHistory.length < 2) {
+        // Se há apenas um ponto, não há linha para desenhar
+        return;
+    }
+
+    // Calcular valores mínimo e máximo para escala
+    const values = quoteHistory.map(q => q.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const range = maxValue - minValue || 1; // Evitar divisão por zero
+
+    // Padding para o gráfico
+    const padding = {
+        top: 20,
+        right: 20,
+        bottom: 30,
+        left: 50
+    };
+
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    // Desenhar eixos
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.lineWidth = 1;
+
+    // Linha horizontal (eixo X)
+    ctx.beginPath();
+    ctx.moveTo(padding.left, height - padding.bottom);
+    ctx.lineTo(width - padding.right, height - padding.bottom);
+    ctx.stroke();
+
+    // Linha vertical (eixo Y)
+    ctx.beginPath();
+    ctx.moveTo(padding.left, padding.top);
+    ctx.lineTo(padding.left, height - padding.bottom);
+    ctx.stroke();
+
+    // Desenhar linhas de referência (grid)
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+    }
+
+    // Desenhar valores no eixo Y
+    ctx.fillStyle = '#475569';
+    ctx.font = '10px "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Droid Sans Mono", "Source Code Pro", monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        const value = maxValue - (range / 4) * i;
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.fillText(value.toFixed(3), padding.left - 10, y);
+    }
+
+    // Desenhar linha do gráfico
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+
+    quoteHistory.forEach((quote, index) => {
+        const x = padding.left + (chartWidth / (quoteHistory.length - 1)) * index;
+        const normalizedValue = (quote.value - minValue) / range;
+        const y = padding.top + chartHeight - (normalizedValue * chartHeight);
+
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+
+    ctx.stroke();
+
+    // Desenhar pontos
+    ctx.fillStyle = '#3b82f6';
+    quoteHistory.forEach((quote, index) => {
+        const x = padding.left + (chartWidth / (quoteHistory.length - 1)) * index;
+        const normalizedValue = (quote.value - minValue) / range;
+        const y = padding.top + chartHeight - (normalizedValue * chartHeight);
+
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Desenhar área preenchida abaixo da linha
+    if (quoteHistory.length >= 2) {
+        const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.02)');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, height - padding.bottom);
+
+        quoteHistory.forEach((quote, index) => {
+            const x = padding.left + (chartWidth / (quoteHistory.length - 1)) * index;
+            const normalizedValue = (quote.value - minValue) / range;
+            const y = padding.top + chartHeight - (normalizedValue * chartHeight);
+            ctx.lineTo(x, y);
+        });
+
+        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.closePath();
+        ctx.fill();
+    }
 }
 
 // Adicionar alerta

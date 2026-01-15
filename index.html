@@ -10,65 +10,78 @@
 <body>
     <div class="container">
         <header>
-            <h1>💵 Dollar Now</h1>
+            <h1>Dollar Now</h1>
             <p class="subtitle">Acompanhe a cotação do dólar em tempo real</p>
         </header>
 
         <main>
-            <div class="quote-card">
-                <div class="quote-header">
-                    <span class="currency-label">USD → BRL</span>
-                    <span class="update-time" id="updateTime">--:--:--</span>
-                </div>
-                <div class="quote-value" id="quoteValue">R$ 0,00</div>
-                <div class="quote-change" id="quoteChange">
-                    <span class="change-label">Variação:</span>
-                    <span class="change-value" id="changeValue">0,00%</span>
-                </div>
-                <div class="converted-value" id="convertedValueContainer" style="display: none;">
-                    <div class="converted-label">Valor convertido:</div>
-                    <div class="converted-amount" id="convertedAmount">--</div>
-                </div>
-            </div>
-
-            <div class="alerts-section">
-                <div class="section-header">
-                    <h2>Alertas de Cotação</h2>
-                    <button id="testNotificationBtn" class="btn-test" title="Testar notificação">
-                        🔔 Testar Notificação
-                    </button>
-                </div>
-                
-                <div class="alert-form">
-                    <div class="form-group">
-                        <label for="alertType">Tipo de Alerta</label>
-                        <select id="alertType">
-                            <option value="above">Acima de</option>
-                            <option value="below">Abaixo de</option>
-                        </select>
+            <div class="main-layout">
+                <div class="left-column">
+                    <div class="quote-card">
+                        <div class="quote-header">
+                            <span class="currency-label">USD → BRL</span>
+                            <span class="update-time" id="updateTime">--:--:--</span>
+                        </div>
+                        <div class="quote-value" id="quoteValue">R$ 0,00</div>
+                        <div class="quote-change" id="quoteChange">
+                            <span class="change-label">Variação:</span>
+                            <span class="change-value" id="changeValue">0,00%</span>
+                        </div>
+                        <div class="converted-value" id="convertedValueContainer" style="display: none;">
+                            <div class="converted-label">Valor convertido:</div>
+                            <div class="converted-amount" id="convertedAmount">--</div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="alertValue">Valor (R$)</label>
-                        <input type="number" id="alertValue" step="0.01" min="0" placeholder="5.50">
+                    
+                    <div class="chart-container">
+                        <h3 class="chart-title">Histórico de Cotações</h3>
+                        <canvas id="quoteChart" width="400" height="200"></canvas>
                     </div>
-                    <button id="addAlertBtn" class="btn-primary">Adicionar Alerta</button>
                 </div>
 
-                <div class="alerts-list" id="alertsList">
-                    <p class="no-alerts">Nenhum alerta configurado</p>
-                </div>
-            </div>
+                <div class="right-column">
+                    <div class="alerts-section">
+                        <div class="section-header">
+                            <h2>Alertas de Cotação</h2>
+                            <button id="testNotificationBtn" class="btn-test" title="Testar notificação">
+                                Testar Notificação
+                            </button>
+                        </div>
+                        
+                        <div class="alert-form">
+                            <div class="form-group">
+                                <label for="alertType">Tipo de Alerta</label>
+                                <div class="select-wrapper">
+                                    <select id="alertType">
+                                        <option value="above">Acima de</option>
+                                        <option value="below">Abaixo de</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="alertValue">Valor (R$)</label>
+                                <input type="number" id="alertValue" step="0.01" min="0" placeholder="5.50">
+                            </div>
+                            <button id="addAlertBtn" class="btn-primary">Adicionar Alerta</button>
+                        </div>
 
-            <div class="conversion-section">
-                <div class="section-header">
-                    <h2>Conversão de Valor</h2>
-                </div>
-                <div class="conversion-form">
-                    <div class="form-group">
-                        <label for="conversionValue">Valor em Dólares (USD)</label>
-                        <input type="number" id="conversionValue" step="0.01" min="0" placeholder="100.00">
+                        <div class="alerts-list" id="alertsList">
+                            <p class="no-alerts">Nenhum alerta configurado</p>
+                        </div>
                     </div>
-                    <button id="saveConversionBtn" class="btn-primary">Salvar Valor</button>
+
+                    <div class="conversion-section">
+                        <div class="section-header">
+                            <h2>Conversão de Valor</h2>
+                        </div>
+                        <div class="conversion-form">
+                            <div class="form-group">
+                                <label for="conversionValue">Valor em Dólares (USD)</label>
+                                <input type="number" id="conversionValue" step="0.01" min="0" placeholder="100.00">
+                            </div>
+                            <button id="saveConversionBtn" class="btn-primary">Salvar Valor</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

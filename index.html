@@ -2,9 +2,28 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Dollar Now - Cotação do Dólar</title>
+    
+    <!-- Favicon padrão -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    
+    <!-- Apple Touch Icon (iOS) -->
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    
+    <!-- Meta tags para iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dollar Now">
+    
+    <!-- Meta tags para Android -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -64,7 +83,10 @@
 
                 <div class="chart-container">
                     <h3 class="chart-title">Histórico de Cotações</h3>
-                    <canvas id="quoteChart" width="400" height="200"></canvas>
+                    <div class="chart-wrapper">
+                        <canvas id="quoteChart" width="400" height="200"></canvas>
+                        <div id="chartTooltip" class="chart-tooltip" style="display: none;"></div>
+                    </div>
                 </div>
 
                 <div class="conversion-section">

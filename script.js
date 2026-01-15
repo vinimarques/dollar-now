@@ -22,6 +22,8 @@ let conversionValue = null; // Valor em dólares para conversão
 let serviceWorkerRegistration = null;
 let quoteHistory = []; // Histórico de cotações para o gráfico
 const MAX_HISTORY_LENGTH = 50; // Máximo de pontos no gráfico
+let chartPoints = []; // Armazenar posições dos pontos do gráfico para hover
+let hoveredPointIndex = -1; // Índice do ponto sendo hovered
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -38,32 +40,73 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
 
     // Inicializar gráfico
+    let resizeTimeout;
     function resizeCanvas() {
         const canvas = document.getElementById('quoteChart');
         if (canvas) {
-            // Ajustar tamanho do canvas para alta resolução
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            const ctx = canvas.getContext('2d');
-            ctx.scale(dpr, dpr);
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
+            // Limpar timeout anterior
+            clearTimeout(resizeTimeout);
 
-            // Redesenhar gráfico se houver dados
-            if (quoteHistory.length > 0) {
-                updateChart();
-            }
+            // Usar timeout para evitar múltiplas chamadas durante o resize
+            resizeTimeout = setTimeout(() => {
+                // Forçar recalculo do layout
+                const container = canvas.parentElement;
+                if (container) {
+                    // Garantir que o container tenha largura definida
+                    const containerWidth = container.clientWidth || container.offsetWidth;
+                    const containerHeight = container.clientHeight || 200;
+
+                    // Ajustar tamanho do canvas para alta resolução
+                    const dpr = window.devicePixelRatio || 1;
+                    const availableWidth = Math.max(containerWidth - 32, 200); // Subtrair padding
+                    const availableHeight = Math.max(containerHeight - 100, 180); // Subtrair padding e título
+
+                    canvas.width = availableWidth * dpr;
+                    canvas.height = availableHeight * dpr;
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(dpr, dpr);
+                    canvas.style.width = availableWidth + 'px';
+                    canvas.style.height = availableHeight + 'px';
+
+                    // Redesenhar gráfico se houver dados
+                    if (quoteHistory.length > 0) {
+                        hoveredPointIndex = -1; // Resetar hover ao redimensionar
+                        updateChart();
+                    }
+                }
+            }, 100);
         }
     }
 
-    resizeCanvas();
+    // Aguardar um frame para garantir que o layout está pronto
+    requestAnimationFrame(() => {
+        resizeCanvas();
+    });
+
+    // Também redimensionar quando a página estiver totalmente carregada
+    if (document.readyState === 'complete') {
+        setTimeout(resizeCanvas, 100);
+    } else {
+        window.addEventListener('load', () => {
+            setTimeout(resizeCanvas, 100);
+        });
+    }
+
     window.addEventListener('resize', resizeCanvas);
+
+    // Também escutar mudanças de orientação
+    window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 300);
+    });
+
+    // Adicionar interatividade ao gráfico (hover)
+    setupChartInteractivity();
 
     // Aguardar um pouco antes da primeira requisição para garantir que tudo está pronto
     setTimeout(() => {
         fetchQuote();
+        // Redimensionar canvas após buscar dados
+        setTimeout(resizeCanvas, 200);
     }, 500);
 
     // Atualizar periodicamente
@@ -388,12 +431,25 @@ function updateChart() {
     const canvas = document.getElementById('quoteChart');
     if (!canvas || quoteHistory.length === 0) return;
 
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    // Garantir que o canvas tenha tamanho correto antes de desenhar
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+        // Se o canvas não tem tamanho, tentar redimensionar
+        resizeCanvas();
+        return;
+    }
 
-    // Limpar canvas
-    ctx.clearRect(0, 0, width, height);
+    // Limpar pontos anteriores
+    chartPoints = [];
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    // O canvas já está dimensionado com dpr, então precisamos usar o tamanho CSS
+    const width = rect.width || canvas.offsetWidth || 400;
+    const height = rect.height || canvas.offsetHeight || 200;
+
+    // Limpar canvas (usar dimensões físicas que já incluem dpr)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (quoteHistory.length < 2) {
         // Se há apenas um ponto, não há linha para desenhar
@@ -406,16 +462,18 @@ function updateChart() {
     const maxValue = Math.max(...values);
     const range = maxValue - minValue || 1; // Evitar divisão por zero
 
-    // Padding para o gráfico
+    // Padding para o gráfico (ajustado para mobile)
+    const isMobile = window.innerWidth <= 640;
     const padding = {
         top: 20,
-        right: 20,
-        bottom: 30,
-        left: 50
+        right: isMobile ? 10 : 20,
+        bottom: isMobile ? 25 : 30,
+        left: isMobile ? 35 : 50
     };
 
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
+    // Garantir que temos espaço suficiente para o gráfico
+    const chartWidth = Math.max(width - padding.left - padding.right, 100);
+    const chartHeight = Math.max(height - padding.top - padding.bottom, 80);
 
     // Desenhar eixos
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
@@ -433,31 +491,37 @@ function updateChart() {
     ctx.lineTo(padding.left, height - padding.bottom);
     ctx.stroke();
 
+    // Garantir que não desenhamos fora dos limites
+    const maxX = Math.min(width - padding.right, canvas.width / dpr);
+    const maxY = Math.min(height - padding.bottom, canvas.height / dpr);
+
     // Desenhar linhas de referência (grid)
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 0.5 / dpr; // Ajustar para dpr
     for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
         ctx.beginPath();
         ctx.moveTo(padding.left, y);
-        ctx.lineTo(width - padding.right, y);
+        ctx.lineTo(maxX, y);
         ctx.stroke();
     }
 
     // Desenhar valores no eixo Y
     ctx.fillStyle = '#475569';
-    ctx.font = '10px "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Droid Sans Mono", "Source Code Pro", monospace';
+    const fontSize = isMobile ? 9 : 10;
+    ctx.font = `${fontSize}px "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Droid Sans Mono", "Source Code Pro", monospace`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (let i = 0; i <= 4; i++) {
         const value = maxValue - (range / 4) * i;
         const y = padding.top + (chartHeight / 4) * i;
-        ctx.fillText(value.toFixed(3), padding.left - 10, y);
+        const xPosition = padding.left - (isMobile ? 5 : 10);
+        ctx.fillText(value.toFixed(3), xPosition, y);
     }
 
     // Desenhar linha do gráfico
     ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = (1.5 / dpr); // Ajustar para dpr
     ctx.beginPath();
 
     quoteHistory.forEach((quote, index) => {
@@ -465,25 +529,64 @@ function updateChart() {
         const normalizedValue = (quote.value - minValue) / range;
         const y = padding.top + chartHeight - (normalizedValue * chartHeight);
 
+        // Garantir que os pontos estão dentro dos limites
+        const clampedX = Math.min(Math.max(x, padding.left), maxX);
+        const clampedY = Math.min(Math.max(y, padding.top), maxY);
+
         if (index === 0) {
-            ctx.moveTo(x, y);
+            ctx.moveTo(clampedX, clampedY);
         } else {
-            ctx.lineTo(x, y);
+            ctx.lineTo(clampedX, clampedY);
         }
     });
 
     ctx.stroke();
 
-    // Desenhar pontos
-    ctx.fillStyle = '#3b82f6';
+    // Armazenar posições dos pontos para hover e desenhar pontos
+    chartPoints = [];
+    const pointRadius = isMobile ? 4 : 5;
+    const hoverRadius = isMobile ? 8 : 10;
+
     quoteHistory.forEach((quote, index) => {
         const x = padding.left + (chartWidth / (quoteHistory.length - 1)) * index;
         const normalizedValue = (quote.value - minValue) / range;
         const y = padding.top + chartHeight - (normalizedValue * chartHeight);
 
+        // Garantir que os pontos estão dentro dos limites
+        const clampedX = Math.min(Math.max(x, padding.left), maxX);
+        const clampedY = Math.min(Math.max(y, padding.top), maxY);
+
+        // Armazenar posição do ponto
+        chartPoints.push({
+            x: clampedX,
+            y: clampedY,
+            value: quote.value,
+            timestamp: quote.timestamp,
+            index: index
+        });
+
+        // Desenhar ponto com destaque se estiver em hover
+        const isHovered = hoveredPointIndex === index;
+        const currentRadius = isHovered ? hoverRadius : pointRadius;
+
+        // Círculo externo (branco) para destaque
+        if (isHovered) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(clampedX, clampedY, currentRadius / dpr, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ponto principal
+        ctx.fillStyle = isHovered ? '#2563eb' : '#3b82f6';
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.arc(clampedX, clampedY, pointRadius / dpr, 0, Math.PI * 2);
         ctx.fill();
+
+        // Borda branca para melhor visibilidade
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5 / dpr;
+        ctx.stroke();
     });
 
     // Desenhar área preenchida abaixo da linha
@@ -500,13 +603,175 @@ function updateChart() {
             const x = padding.left + (chartWidth / (quoteHistory.length - 1)) * index;
             const normalizedValue = (quote.value - minValue) / range;
             const y = padding.top + chartHeight - (normalizedValue * chartHeight);
-            ctx.lineTo(x, y);
+
+            // Garantir que os pontos estão dentro dos limites
+            const clampedX = Math.min(Math.max(x, padding.left), maxX);
+            const clampedY = Math.min(Math.max(y, padding.top), maxY);
+
+            ctx.lineTo(clampedX, clampedY);
         });
 
-        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.lineTo(maxX, height - padding.bottom);
         ctx.closePath();
         ctx.fill();
     }
+
+    // Esconder tooltip se não houver hover ativo
+    if (hoveredPointIndex === -1) {
+        const tooltip = document.getElementById('chartTooltip');
+        if (tooltip) {
+            tooltip.style.display = 'none';
+        }
+    }
+}
+
+// Configurar interatividade do gráfico (hover)
+let chartInteractivitySetup = false;
+function setupChartInteractivity() {
+    const canvas = document.getElementById('quoteChart');
+    const tooltip = document.getElementById('chartTooltip');
+    if (!canvas || !tooltip || chartInteractivitySetup) return;
+
+    const chartWrapper = canvas.parentElement;
+    if (!chartWrapper) return;
+
+    chartInteractivitySetup = true;
+    let currentHoverIndex = -1;
+
+    function getPointAtPosition(mouseX, mouseY) {
+        const rect = canvas.getBoundingClientRect();
+        const x = mouseX - rect.left;
+        const y = mouseY - rect.top;
+        const dpr = window.devicePixelRatio || 1;
+        const isMobile = window.innerWidth <= 640;
+        const hitRadius = isMobile ? 12 : 15;
+
+        // Encontrar o ponto mais próximo
+        let closestIndex = -1;
+        let minDistance = Infinity;
+
+        chartPoints.forEach((point, index) => {
+            const distance = Math.sqrt(
+                Math.pow(point.x - x, 2) + Math.pow(point.y - y, 2)
+            );
+            if (distance < hitRadius && distance < minDistance) {
+                minDistance = distance;
+                closestIndex = index;
+            }
+        });
+
+        return closestIndex;
+    }
+
+    function showTooltip(index, mouseX, mouseY) {
+        if (index === -1 || !chartPoints[index]) {
+            tooltip.style.display = 'none';
+            return;
+        }
+
+        const point = chartPoints[index];
+        const date = new Date(point.timestamp);
+        const dateStr = date.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        const timeStr = date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const valueStr = point.value.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3
+        });
+
+        tooltip.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 2px;">${valueStr}</div>
+            <div style="font-size: 10px; opacity: 0.9;">${dateStr}</div>
+            <div style="font-size: 10px; opacity: 0.9;">${timeStr}</div>
+        `;
+
+        const rect = canvas.getBoundingClientRect();
+        const wrapperRect = chartWrapper.getBoundingClientRect();
+
+        // Posicionar tooltip acima do ponto
+        let left = rect.left + point.x - wrapperRect.left;
+        let top = rect.top + point.y - wrapperRect.top - 10;
+
+        // Ajustar para não sair da tela
+        const tooltipWidth = tooltip.offsetWidth || 120;
+        const tooltipHeight = tooltip.offsetHeight || 60;
+
+        if (left - tooltipWidth / 2 < 0) {
+            left = tooltipWidth / 2;
+        } else if (left + tooltipWidth / 2 > wrapperRect.width) {
+            left = wrapperRect.width - tooltipWidth / 2;
+        }
+
+        if (top - tooltipHeight < 0) {
+            top = rect.top + point.y - wrapperRect.top + 20;
+        }
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+        tooltip.style.display = 'block';
+    }
+
+    function hideTooltip() {
+        tooltip.style.display = 'none';
+        currentHoverIndex = -1;
+        hoveredPointIndex = -1;
+        // Redesenhar gráfico para remover destaque do ponto
+        if (quoteHistory.length > 0) {
+            updateChart();
+        }
+    }
+
+    // Event listeners
+    canvas.addEventListener('mousemove', (e) => {
+        const pointIndex = getPointAtPosition(e.clientX, e.clientY);
+
+        if (pointIndex !== currentHoverIndex) {
+            currentHoverIndex = pointIndex;
+            hoveredPointIndex = pointIndex;
+
+            if (pointIndex !== -1) {
+                showTooltip(pointIndex, e.clientX, e.clientY);
+                updateChart(); // Redesenhar para destacar o ponto
+            } else {
+                hideTooltip();
+            }
+        } else if (pointIndex !== -1) {
+            // Atualizar posição do tooltip se o mouse se mover
+            showTooltip(pointIndex, e.clientX, e.clientY);
+        }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        hideTooltip();
+    });
+
+    // Para mobile/touch
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const pointIndex = getPointAtPosition(touch.clientX, touch.clientY);
+
+        if (pointIndex !== -1) {
+            hoveredPointIndex = pointIndex;
+            showTooltip(pointIndex, touch.clientX, touch.clientY);
+            updateChart();
+        }
+    });
+
+    canvas.addEventListener('touchend', () => {
+        setTimeout(() => {
+            hideTooltip();
+        }, 2000); // Manter tooltip por 2 segundos no touch
+    });
 }
 
 // Adicionar alerta

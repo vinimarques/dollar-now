@@ -55,6 +55,7 @@ body {
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden; /* Prevenir scroll horizontal */
 }
 
 .container {
@@ -65,6 +66,8 @@ body {
     border: 1px solid var(--border-strong);
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 header {
@@ -97,6 +100,8 @@ main {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-6);
     align-items: stretch;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .quote-card {
@@ -109,6 +114,8 @@ main {
     flex-direction: column;
     justify-content: center;
     min-height: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .quote-header {
@@ -121,6 +128,9 @@ main {
     letter-spacing: 0.05em;
     color: var(--text-muted);
     font-weight: 500;
+    width: 100%;
+    box-sizing: border-box;
+    gap: var(--space-2);
 }
 
 .currency-label {
@@ -182,11 +192,61 @@ main {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+    overflow: hidden; /* Prevenir overflow do gráfico */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.chart-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 200px;
+    width: 100%;
 }
 
 #quoteChart {
-    flex: 1;
-    min-height: 200px;
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    box-sizing: border-box;
+    cursor: crosshair;
+}
+
+.chart-tooltip {
+    position: absolute;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+    margin-top: -8px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.chart-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+    .chart-tooltip {
+        font-size: 10px;
+        padding: var(--space-1) var(--space-2);
+        max-width: 140px;
+        white-space: normal;
+    }
 }
 
 .chart-title {
@@ -232,6 +292,8 @@ main {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .section-header {
@@ -503,6 +565,8 @@ main {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .conversion-section .section-header {
@@ -541,44 +605,256 @@ footer {
 @media (max-width: 968px) {
     .main-layout {
         grid-template-columns: 1fr;
+        gap: var(--space-4);
     }
 }
 
 @media (max-width: 640px) {
     body {
-        padding: var(--space-2);
+        padding: 0;
+        font-size: 15px;
+        /* Prevenir zoom ao focar em inputs no iOS */
+        -webkit-text-size-adjust: 100%;
+    }
+
+    .container {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        /* Ajustar para safe area no iPhone */
+        min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
     }
 
     main {
         padding: var(--space-4);
+        width: 100%;
+        box-sizing: border-box;
     }
 
-    .alert-form {
-        grid-template-columns: 1fr;
-    }
-
-    .quote-value {
-        font-size: 36px;
+    header {
+        padding: var(--space-4) var(--space-3);
+        padding-top: calc(var(--space-4) + env(safe-area-inset-top));
     }
 
     header h1 {
-        font-size: 26px;
+        font-size: 24px;
+        margin-bottom: var(--space-1);
+    }
+
+    .subtitle {
+        font-size: 12px;
+    }
+
+    .quote-card {
+        padding: var(--space-4);
+    }
+
+    .quote-header {
+        font-size: 10px;
+        margin-bottom: var(--space-3);
+        flex-wrap: wrap;
+    }
+
+    .update-time {
+        font-size: 9px;
+    }
+
+    .quote-value {
+        font-size: 32px;
+        margin: var(--space-3) 0;
+    }
+
+    .quote-change {
+        font-size: 12px;
+        margin-top: var(--space-3);
+    }
+
+    .change-value {
+        padding: var(--space-1) var(--space-2);
+        font-size: 12px;
+    }
+
+    .converted-value {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+    }
+
+    .converted-label {
+        font-size: 10px;
+    }
+
+    .converted-amount {
+        font-size: 18px;
+    }
+
+    .alerts-section,
+    .conversion-section,
+    .chart-container {
+        padding: var(--space-3);
     }
 
     .section-header {
         flex-direction: column;
         align-items: stretch;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+    }
+
+    .alerts-section h2,
+    .conversion-section h2 {
+        font-size: 15px;
+    }
+
+    .alert-form {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+    }
+
+    .form-group label {
+        font-size: 10px;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: var(--space-3) var(--space-3);
+        font-size: 16px; /* Prevenir zoom no iOS */
+        min-height: 44px; /* Tamanho mínimo para touch */
+    }
+
+    .btn-primary {
+        padding: var(--space-3) var(--space-4);
+        font-size: 15px;
+        min-height: 44px; /* Tamanho mínimo para touch */
+        width: 100%;
     }
 
     .btn-test {
         width: 100%;
+        min-height: 36px;
+        padding: var(--space-2) var(--space-3);
     }
 
-    .converted-amount {
-        font-size: 20px;
+    .alert-item {
+        padding: var(--space-3);
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .alert-info {
+        flex: 1 1 100%;
+    }
+
+    .alert-type {
+        font-size: 10px;
+    }
+
+    .alert-value {
+        font-size: 15px;
+    }
+
+    .delete-btn {
+        min-height: 36px;
+        padding: var(--space-2) var(--space-3);
+        font-size: 12px;
+        flex: 0 0 auto;
+    }
+
+    .chart-container {
+        min-height: 200px;
+        padding: var(--space-3);
+        overflow: visible; /* Permitir que o gráfico seja visível */
+    }
+
+    .chart-title {
+        font-size: 12px;
+        margin-bottom: var(--space-3);
     }
 
     #quoteChart {
-        height: 150px;
+        min-height: 180px;
+        width: 100% !important;
+        max-width: 100%;
+        height: auto;
+    }
+
+    footer {
+        padding: var(--space-3);
+        padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+        font-size: 11px;
+    }
+
+    /* Melhorar área de toque para elementos interativos */
+    button,
+    .delete-btn,
+    .btn-test,
+    .btn-primary {
+        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
+        touch-action: manipulation;
+    }
+
+    /* Ajustar inputs para melhor experiência em mobile */
+    input[type="number"] {
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+}
+
+/* Ajustes para telas muito pequenas */
+@media (max-width: 375px) {
+    body {
+        padding: 0;
+    }
+
+    main {
+        padding: var(--space-3);
+    }
+
+    header {
+        padding: var(--space-3) var(--space-2);
+        padding-top: calc(var(--space-3) + env(safe-area-inset-top));
+    }
+
+    header h1 {
+        font-size: 22px;
+    }
+
+    .quote-value {
+        font-size: 28px;
+    }
+
+    .alerts-section,
+    .conversion-section,
+    .chart-container,
+    .quote-card {
+        padding: var(--space-3);
+    }
+
+    .chart-container {
+        padding: var(--space-2);
+    }
+
+    #quoteChart {
+        min-height: 160px;
+    }
+}
+
+/* Ajustes para modo landscape em mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+    .quote-value {
+        font-size: 28px;
+    }
+
+    #quoteChart {
+        min-height: 150px;
     }
 }
